@@ -26,7 +26,7 @@ import Button from '../components/ui/Button';
 import { COLORS, SPACING, BORDERS } from '../styles/theme';
 
 // --- Componente del Formulario (Modal) ---
-const TaskForm = ({ visible, task, onSave, onCancel, api }) => {
+const TaskForm = ({ visible, task, onSave, onCancel }) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     titulo: '',
@@ -92,9 +92,9 @@ const TaskForm = ({ visible, task, onSave, onCancel, api }) => {
     setLoading(true);
     try {
       if (task) {
-        await api.put(`/tasks/${task.id}`, formData);
+        await tasksAPI.update(task.id, formData);
       } else {
-        await api.post('/tasks', formData);
+        await tasksAPI.create(formData);
       }
       onSave();
     } catch (error) {
@@ -174,7 +174,7 @@ const StatCard = ({ label, value, color }) => (
 
 // --- Pantalla Principal de Tareas ---
 export default function TasksScreen() {
-  const { api, user } = useAuth();
+  const { user } = useAuth();
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [rawTasks, setRawTasks] = useState([]);
@@ -238,7 +238,7 @@ export default function TasksScreen() {
   const confirmDeleteTask = async () => {
     if (!taskToDelete) return;
     try {
-      await api.delete(`/tasks/${taskToDelete.id}`);
+      await tasksAPI.delete(taskToDelete.id);
       setIsConfirmVisible(false);
       setTaskToDelete(null);
       fetchData();
@@ -338,7 +338,6 @@ export default function TasksScreen() {
           task={editingTask}
           onSave={handleTaskSaved}
           onCancel={() => setShowForm(false)}
-          api={api}
         />
         <ConfirmationModal
           visible={isConfirmVisible}
