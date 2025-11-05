@@ -17,6 +17,8 @@ export default function AuthCallbackScreen() {
         // Supabase on native/web completes session automatically on redirect.
         // We just refresh our local state and go to the app.
         await checkAuth();
+        // Give the state a moment to settle before navigating
+        await new Promise(resolve => setTimeout(resolve, 300));
       } finally {
         if (mounted) {
           navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
