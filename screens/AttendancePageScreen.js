@@ -146,6 +146,20 @@ export default function AttendancePageScreen() {
     } catch (e) { return timeStr; }
   };
 
+  // Helper to get today's date (YYYY-MM-DD) in Argentina timezone for <input type="date" max>
+  const todayAR = React.useMemo(() => {
+    try {
+      // en-CA locale outputs YYYY-MM-DD
+      return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    } catch (e) {
+      // Fallback to local date if timezone not supported
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${mm}-${dd}`;
+    }
+  }, []);
+
   // ...eliminado, ya se declara más arriba usando filteredHistory...
 
   const toggleDateExpanded = (date) => {
@@ -249,7 +263,7 @@ export default function AttendancePageScreen() {
                     {Platform.OS === 'web' ? (
                       <input
                         type="date"
-                        max={new Date().toISOString().split('T')[0]}
+                        max={todayAR}
                         value={startDate || ''}
                         onChange={(e) => setStartDate(e.target.value)}
                         style={{ padding: 12, borderRadius: 6, border: '1px solid #ddd', width: '100%', fontSize: 14 }}
@@ -282,7 +296,7 @@ export default function AttendancePageScreen() {
                     {Platform.OS === 'web' ? (
                       <input
                         type="date"
-                        max={new Date().toISOString().split('T')[0]}
+                        max={todayAR}
                         value={endDate || ''}
                         onChange={(e) => setEndDate(e.target.value)}
                         style={{ padding: 12, borderRadius: 6, border: '1px solid #ddd', width: '100%', fontSize: 14 }}
