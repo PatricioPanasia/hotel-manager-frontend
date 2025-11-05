@@ -25,13 +25,14 @@ export const AuthProvider = ({ children }) => {
     // Check active session on mount
     const initSession = async () => {
       if (!supabase) {
-        console.warn("Supabase client not configured");
+        console.warn("[Auth] Supabase client not configured. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
         setLoading(false);
         return;
       }
 
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("[Auth] getSession ->", currentSession ? "SESSION FOUND" : "NO SESSION");
         
         if (currentSession) {
           setSession(currentSession);
@@ -39,13 +40,23 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(!!ok);
         }
       } catch (error) {
-        console.error("Error checking session:", error);
+        console.error("[Auth] Error checking session:", error);
       } finally {
         setLoading(false);
       }
     };
 
     initSession();
+
+    // Safety: if something hangs, ensure loading finishes after a short timeout
+    const safety = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn("[Auth] Safety timeout clearing loading state");
+        }
+        return false;
+      });
+    }, 4000);
 
     // Listen for auth state changes
     if (supabase) {
@@ -68,8 +79,11 @@ export const AuthProvider = ({ children }) => {
 
       return () => {
         authListener?.subscription?.unsubscribe();
+        clearTimeout(safety);
       };
     }
+    
+    return () => clearTimeout(safety);
   }, []);
 
   const syncUserProfile = async (authUser) => {
