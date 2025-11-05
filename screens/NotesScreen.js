@@ -17,7 +17,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useAuth } from "../context/AuthContext";
 import { useFocusEffect } from '@react-navigation/native';
 import DashboardLayout from "../components/Layout/DashboardLayout";
-import { usersAPI } from "../services/api";
+import { usersAPI, notesAPI } from "../services/api";
 import CustomSelect from "../components/Common/CustomSelect";
 import NotesFilterBar from "../components/Notes/NotesFilterBar";
 import Card from '../components/ui/Card';
@@ -25,7 +25,7 @@ import Button from '../components/ui/Button';
 import { COLORS, SPACING, BORDERS } from '../styles/theme';
 
 // --- Componente del Formulario (Modal) ---
-const NoteForm = ({ visible, note, onSave, onCancel, api, user }) => {
+const NoteForm = ({ visible, note, onSave, onCancel, user }) => {
   const [formData, setFormData] = useState({
     titulo: '',
     contenido: '',
@@ -86,9 +86,9 @@ const NoteForm = ({ visible, note, onSave, onCancel, api, user }) => {
     setLoading(true);
     try {
       if (note) {
-        await api.put(`/notes/${note.id}`, formData);
+        await notesAPI.update(note.id, formData);
       } else {
-        await api.post('/notes', formData);
+        await notesAPI.create(formData);
       }
       onSave();
     } catch (error) {
@@ -176,7 +176,7 @@ const StatCard = ({ label, value, color }) => (
 
 // --- Pantalla Principal de Notas ---
 export default function NotesScreen() {
-  const { api, user } = useAuth();
+  const { user } = useAuth();
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [rawNotes, setRawNotes] = useState([]);
@@ -190,8 +190,8 @@ export default function NotesScreen() {
     setLoading(true);
     try {
       const [notesRes, statsRes] = await Promise.all([
-        api.get("/notes"), // Se obtienen todas las notas
-        api.get("/notes/stats")
+        notesAPI.getAll(), // Obtener todas las notas
+        notesAPI.getStats(),
       ]);
       setRawNotes(notesRes.data.data || []);
       setStats(statsRes.data.data || { total: 0, importantes: 0, personales: 0 });
@@ -240,7 +240,7 @@ export default function NotesScreen() {
   const confirmDeleteNote = async () => {
     if (!noteToDelete) return;
     try {
-      await api.delete(`/notes/${noteToDelete.id}`);
+      await notesAPI.delete(noteToDelete.id);
       setIsConfirmVisible(false);
       setNoteToDelete(null);
       fetchData();
@@ -316,7 +316,6 @@ export default function NotesScreen() {
           note={editingNote}
           onSave={handleNoteSaved}
           onCancel={() => setShowForm(false)}
-          api={api}
           user={user}
         />
         <ConfirmationModal
