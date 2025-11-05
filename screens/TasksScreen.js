@@ -189,8 +189,8 @@ export default function TasksScreen() {
     setLoading(true);
     try {
       const [tasksRes, statsRes] = await Promise.all([
-        api.get("/tasks"), // Se obtienen todas las tareas
-        api.get("/tasks/stats")
+        tasksAPI.getAll(),
+        tasksAPI.getStats()
       ]);
       setRawTasks(tasksRes.data.data || []);
       setStats(statsRes.data.data || { pendientes: 0, en_progreso: 0, prioritarias: 0 });
