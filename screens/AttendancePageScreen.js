@@ -114,27 +114,29 @@ export default function AttendancePageScreen() {
   // Helpers for date formatting in Argentina timezone
   const formatDateLabel = (dateStr) => {
     if (!dateStr) return '';
-    // If it's already a Date
-    let d = null;
-    if (dateStr instanceof Date) d = dateStr;
-    else if (typeof dateStr === 'string') {
-      // Try direct parse (handles ISO strings)
-      d = new Date(dateStr);
-      if (isNaN(d)) {
-        // Try YYYY-MM-DD specifically
-        const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (m) {
-          const [_, y, mo, da] = m;
-          d = new Date(`${y}-${mo}-${da}T00:00:00`);
-        }
+    // Handle 'YYYY-MM-DD' explicitly to avoid UTC parsing shifting a day
+    if (typeof dateStr === 'string') {
+      const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) {
+        const y = parseInt(m[1], 10);
+        const mo = parseInt(m[2], 10) - 1; // 0-based
+        const da = parseInt(m[3], 10);
+        // Create date in local time (midday to avoid DST edges)
+        const dLocal = new Date(y, mo, da, 12, 0, 0);
+        return dLocal.toLocaleDateString('es-AR', {
+          weekday: 'long', day: 'numeric', month: 'short',
+          timeZone: 'America/Argentina/Buenos_Aires'
+        });
       }
-    } else {
-      d = new Date(String(dateStr));
     }
 
+    // Fallbacks
+    const d = dateStr instanceof Date ? dateStr : new Date(String(dateStr));
     if (!d || isNaN(d)) return 'Invalid Date';
-
-    return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'America/Argentina/Buenos_Aires' });
+    return d.toLocaleDateString('es-AR', {
+      weekday: 'long', day: 'numeric', month: 'short',
+      timeZone: 'America/Argentina/Buenos_Aires'
+    });
   };
 
   const formatTime = (timeStr) => {
