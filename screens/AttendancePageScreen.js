@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
+import { attendanceAPI, usersAPI } from "../services/api";
 import { useFocusEffect } from "@react-navigation/native";
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -12,7 +13,7 @@ import { COLORS, SPACING, BORDERS } from '../styles/theme';
 
 // --- Pantalla Principal de Asistencia ---
 export default function AttendancePageScreen() {
-  const { api, user } = useAuth();
+  const { user } = useAuth();
   const [currentStatus, setCurrentStatus] = useState(null);
   const [history, setHistory] = useState([]);
   const [startDate, setStartDate] = useState(null);
@@ -80,8 +81,8 @@ export default function AttendancePageScreen() {
       if (opts.usuario_id) params.usuario_id = opts.usuario_id;
 
       const [statusRes, historyRes] = await Promise.all([
-        api.get('/attendance/status'),
-        api.get('/attendance', { params })
+        attendanceAPI.getCurrentStatus(),
+        attendanceAPI.getAll(params)
       ]);
       setCurrentStatus(statusRes.data.data);
       setHistory(historyRes.data.data || []);
@@ -103,7 +104,7 @@ export default function AttendancePageScreen() {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/users');
+  const res = await usersAPI.getAll();
       setUsers(res.data.data || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -154,7 +155,7 @@ export default function AttendancePageScreen() {
   const handleCheckIn = async () => {
     setActionLoading(true);
     try {
-      await api.post('/attendance/check-in', { ubicacion: 'Automático', observaciones: '' });
+  await attendanceAPI.checkIn({ ubicacion: 'Automático', observaciones: '' });
       showAlert("Éxito", "Entrada registrada correctamente.", "success");
       fetchData();
     } catch (error) {
@@ -167,7 +168,7 @@ export default function AttendancePageScreen() {
   const handleCheckOut = async () => {
     setActionLoading(true);
     try {
-      await api.post('/attendance/check-out', { ubicacion: 'Automático', observaciones: '' });
+  await attendanceAPI.checkOut({ ubicacion: 'Automático', observaciones: '' });
       showAlert("Éxito", "Salida registrada correctamente.", "success");
       fetchData();
     } catch (error) {
