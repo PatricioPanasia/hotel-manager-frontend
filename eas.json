@@ -38,7 +38,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://hotel-manager-backend-ruddy.vercel.app/api",
+        "EXPO_PUBLIC_API_BASE_URL": "https://hotel-manager-backend-ruddy.vercel.app",
         "EXPO_PUBLIC_SUPABASE_URL": "https://mkflmlbqfdcvdnknmkmt.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZmxtbGJxZmRjdmRua25ta210Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3NTc2ODEsImV4cCI6MjA0NjMzMzY4MX0.0Lx6LxhsWrIg0vb_aTshOBDqWR2Y1Dkv-90Y8xJp3wI"
       }
