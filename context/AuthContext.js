@@ -207,9 +207,17 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const isWeb = typeof window !== 'undefined' && Platform.OS === 'web';
+      // Derive scheme dynamically from app config to avoid mismatches
+      let appScheme = undefined;
+      try {
+        const Constants = (await import('expo-constants')).default;
+        appScheme = Constants?.expoConfig?.scheme;
+      } catch {}
+
+      const scheme = appScheme || 'hotelmanager';
       const redirectTo = isWeb
         ? `${window.location.origin}/auth/callback`
-        : 'hotelmanager://auth/callback';
+        : `${scheme}://auth/callback`;
 
       console.log("[Auth] Google OAuth redirectTo:", redirectTo);
 

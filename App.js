@@ -1,4 +1,5 @@
 import React from "react";
+import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider } from "./context/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./context/AppNavigator";
@@ -34,6 +35,8 @@ if (Platform.OS === "web") {
 }
 
 export default function App() {
+  // Ensure OAuth sessions are completed correctly on native/web
+  WebBrowser.maybeCompleteAuthSession();
   return (
     <SafeAreaProvider>
       <AuthProvider>
