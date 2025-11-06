@@ -8,7 +8,6 @@ import { COLORS, SPACING, BORDERS } from '../../styles/theme';
 const UserStats = ({ user, onClose, visible }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -25,16 +24,10 @@ const UserStats = ({ user, onClose, visible }) => {
       }
     };
 
-    fetchStats();
+    if (visible) {
+      fetchStats();
+    }
   }, [user, visible]);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsClosing(false);
-      onClose();
-    }, 350); // Esperar a que termine la animación de 300ms + 50ms extra
-  };
 
   const StatCard = ({ label, value, color }) => (
     <View style={[styles.statCard, { borderLeftColor: color }]}>
@@ -43,20 +36,18 @@ const UserStats = ({ user, onClose, visible }) => {
     </View>
   );
 
-  if (!visible) return null;
-
   return (
     <Modal
-      visible={visible && !isClosing}
+      visible={visible}
       animationType="fade"
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
       transparent={true}
     >
       <View style={styles.container}>
         <Animated.View 
           style={styles.modalContent}
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(300)}
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(200)}
         >
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>Estadísticas de {user?.nombre}</Text>
@@ -118,7 +109,7 @@ const UserStats = ({ user, onClose, visible }) => {
           </ScrollView>
           
           <View style={styles.modalActions}>
-            <Button title="Cerrar" onPress={handleClose} />
+            <Button title="Cerrar" onPress={onClose} />
           </View>
         </Animated.View>
       </View>
