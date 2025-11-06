@@ -203,16 +203,39 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Error email sign-in:", error);
       let message = "Error en el inicio de sesión";
-      
-      if (error.message?.includes("Invalid login credentials")) {
+
+      const rawMsg = String(error?.message || "");
+      const lower = rawMsg.toLowerCase();
+
+      // Credenciales inválidas
+      if (lower.includes("invalid login credentials")) {
         message = "Email o contraseña incorrectos";
-      } else if (error.message?.includes("Email not confirmed")) {
+      }
+      // Email no confirmado
+      else if (lower.includes("email not confirmed") || lower.includes("email not confirmed")) {
         message = "Debes confirmar tu email antes de iniciar sesión";
       }
+      // Problemas de red / conectividad
+      else if (
+        lower.includes("failed to fetch") ||
+        lower.includes("network request failed") ||
+        lower.includes("fetcherror") ||
+        lower.includes("typeerror: network request failed")
+      ) {
+        message = "No se pudo conectar con el servicio de autenticación. Revisa tu conexión a internet.";
+      }
+      // Límite de intentos o políticas
+      else if (lower.includes("too many requests") || lower.includes("rate limit")) {
+        message = "Demasiados intentos. Intenta nuevamente en unos minutos.";
+      }
+
+      // Permitir modo debug opcional para ver el mensaje crudo de Supabase
+      const showDebug = process.env.EXPO_PUBLIC_SHOW_AUTH_DEBUG === '1';
+      const details = showDebug && rawMsg ? ` (detalle: ${rawMsg})` : '';
 
       return {
         success: false,
-        message,
+        message: `${message}${details}`,
       };
     }
   };
