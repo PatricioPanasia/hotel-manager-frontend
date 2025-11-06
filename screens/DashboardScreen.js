@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { tasksAPI, attendanceAPI, notesAPI } from "../services/api";
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -69,59 +69,61 @@ export default function DashboardScreen() {
 
   console.log('User object in DashboardScreen:', user);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const results = await Promise.allSettled([
-          tasksAPI.getStats(),
-          attendanceAPI.getStats(),
-          notesAPI.getStats(),
-        ]);
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    try {
+      const results = await Promise.allSettled([
+        tasksAPI.getStats(),
+        attendanceAPI.getStats(),
+        notesAPI.getStats(),
+      ]);
 
-        const next = { ...stats };
+      const next = { ...stats };
 
-        // Tasks
-        if (results[0].status === 'fulfilled') {
-          next.tasks = results[0].value.data.data || {};
-        } else {
-          console.error('Dashboard: tasks stats failed', results[0].reason);
-        }
-
-        // Attendance
-        if (results[1].status === 'fulfilled') {
-          next.attendance = results[1].value.data.data || {};
-        } else {
-          console.error('Dashboard: attendance stats failed', results[1].reason);
-        }
-
-        // Notes
-        if (results[2].status === 'fulfilled') {
-          next.notes = results[2].value.data.data || {};
-        } else {
-          console.error('Dashboard: notes stats failed', results[2].reason);
-        }
-
-        // Fallback: if pendientes is missing or zero, try counting via tasks list (server paginates with count)
-        try {
-          if (!next.tasks || typeof next.tasks.pendientes !== 'number' || next.tasks.pendientes === 0) {
-            const pendingRes = await tasksAPI.getAll({ estado: 'pendiente', page: 1, limit: 1 });
-            const totalPend = pendingRes.data?.pagination?.total ?? 0;
-            next.tasks = { ...(next.tasks || {}), pendientes: totalPend, total: next.tasks?.total };
-          }
-        } catch (fallbackErr) {
-          console.warn('Dashboard: fallback pending count failed', fallbackErr?.response?.data || fallbackErr?.message);
-        }
-
-        setStats(next);
-      } finally {
-        setLoading(false);
+      // Tasks
+      if (results[0].status === 'fulfilled') {
+        next.tasks = results[0].value.data.data || {};
+      } else {
+        console.error('Dashboard: tasks stats failed', results[0].reason);
       }
-    };
 
-    fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // Attendance
+      if (results[1].status === 'fulfilled') {
+        next.attendance = results[1].value.data.data || {};
+      } else {
+        console.error('Dashboard: attendance stats failed', results[1].reason);
+      }
+
+      // Notes
+      if (results[2].status === 'fulfilled') {
+        next.notes = results[2].value.data.data || {};
+      } else {
+        console.error('Dashboard: notes stats failed', results[2].reason);
+      }
+
+      // Fallback: if pendientes is missing or zero, try counting via tasks list (server paginates with count)
+      try {
+        if (!next.tasks || typeof next.tasks.pendientes !== 'number' || next.tasks.pendientes === 0) {
+          const pendingRes = await tasksAPI.getAll({ estado: 'pendiente', page: 1, limit: 1 });
+          const totalPend = pendingRes.data?.pagination?.total ?? 0;
+          next.tasks = { ...(next.tasks || {}), pendientes: totalPend, total: next.tasks?.total };
+        }
+      } catch (fallbackErr) {
+        console.warn('Dashboard: fallback pending count failed', fallbackErr?.response?.data || fallbackErr?.message);
+      }
+
+      setStats(next);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Recargar datos cada vez que vuelves al tab Dashboard
+  useFocusEffect(
+    useCallback(() => {
+      fetchStats();
+    }, [fetchStats])
+  );
 
   // Calcula eficacia: preferimos backend efficiency (excluye tareas personales); fallback a completadas/total
   const computeEficacia = () => {
