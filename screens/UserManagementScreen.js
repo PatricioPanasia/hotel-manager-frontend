@@ -116,17 +116,11 @@ const UserManagementScreen = () => {
         </View>
       </Modal>
 
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <UserStats 
+        user={selectedUser} 
         visible={isStatsVisible}
-        onRequestClose={() => setIsStatsVisible(false)}
-      >
-        <UserStats 
-          user={selectedUser} 
-          onClose={() => setIsStatsVisible(false)} 
-        />
-      </Modal>
+        onClose={() => setIsStatsVisible(false)} 
+      />
 
       <ConfirmationModal
         visible={isConfirmVisible}
