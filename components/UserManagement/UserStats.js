@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { usersAPI } from '../../services/api';
-import { COLORS, FONT_SIZES, SPACING, BORDERS } from '../../styles/theme';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import { COLORS, SPACING, BORDERS } from '../../styles/theme';
 
 const UserStats = ({ user, onClose }) => {
   const [stats, setStats] = useState(null);
@@ -25,87 +27,222 @@ const UserStats = ({ user, onClose }) => {
     fetchStats();
   }, [user]);
 
+  const StatCard = ({ label, value, color }) => (
+    <View style={[styles.statCard, { borderLeftColor: color }]}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Statistics for {user?.nombre}</Text>
+      <Card style={styles.card}>
+        <Text style={styles.title}>Estadísticas de {user?.nombre}</Text>
 
-      {loading ? (
-        <ActivityIndicator size="large" color={COLORS.accent} />
-      ) : stats ? (
-        <ScrollView>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Task Statistics</Text>
-            <Text style={styles.statText}>Total Tasks: {stats.taskStats.total || 0}</Text>
-            <Text style={styles.statText}>Pending: {stats.taskStats.pendientes || 0}</Text>
-            <Text style={styles.statText}>In Progress: {stats.taskStats.en_progreso || 0}</Text>
-            <Text style={styles.statText}>Completed: {stats.taskStats.completadas || 0}</Text>
-          </View>
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
+        ) : stats ? (
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Task Statistics */}
+            <Text style={styles.sectionTitle}>📋 Estadísticas de Tareas</Text>
+            <View style={styles.statsGrid}>
+              <StatCard label="Total" value={stats.taskStats.total || 0} color={COLORS.primary} />
+              <StatCard label="Pendientes" value={stats.taskStats.pendientes || 0} color={COLORS.accent} />
+              <StatCard label="En Progreso" value={stats.taskStats.en_progreso || 0} color={COLORS.primary} />
+              <StatCard label="Completadas" value={stats.taskStats.completadas || 0} color={COLORS.success} />
+            </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Attendance (Last 30)</Text>
-            {stats.attendanceHistory.map((item, index) => (
-              <View key={index} style={styles.attendanceItem}>
-                <Text style={styles.statText}>Date: {item.fecha}</Text>
-                <Text style={styles.statText}>Check-in: {item.hora_entrada}</Text>
-                <Text style={styles.statText}>Check-out: {item.hora_salida || 'N/A'}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      ) : (
-        <Text style={styles.statText}>Could not load statistics.</Text>
-      )}
+            {/* Efficiency */}
+            {stats.efficiency && (
+              <>
+                <Text style={styles.sectionTitle}>📈 Eficacia</Text>
+                <View style={styles.efficiencyContainer}>
+                  <Text style={styles.efficiencyValue}>{stats.efficiency.percentage}%</Text>
+                  <Text style={styles.efficiencyText}>
+                    {stats.efficiency.completed_considered} de {stats.efficiency.assigned_considered} tareas completadas
+                  </Text>
+                </View>
+              </>
+            )}
 
-      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-        <Text style={styles.buttonText}>Close</Text>
-      </TouchableOpacity>
+            {/* Recent Attendance */}
+            <Text style={styles.sectionTitle}>⏱️ Asistencias Recientes (Últimas 30 días)</Text>
+            {stats.attendanceHistory && stats.attendanceHistory.length > 0 ? (
+              stats.attendanceHistory.map((item, index) => (
+                <View key={index} style={styles.attendanceItem}>
+                  <View style={styles.attendanceRow}>
+                    <Text style={styles.attendanceDate}>📅 {item.fecha}</Text>
+                  </View>
+                  <View style={styles.attendanceDetails}>
+                    <Text style={styles.attendanceTime}>
+                      ⬇️ Entrada: <Text style={styles.timeValue}>{item.hora_entrada || 'N/A'}</Text>
+                    </Text>
+                    <Text style={styles.attendanceTime}>
+                      ⬆️ Salida: <Text style={styles.timeValue}>{item.hora_salida || 'N/A'}</Text>
+                    </Text>
+                  </View>
+                  {item.ubicacion && (
+                    <Text style={styles.attendanceLocation}>📍 {item.ubicacion}</Text>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>Sin registros de asistencia</Text>
+            )}
+          </ScrollView>
+        ) : (
+          <Text style={styles.errorText}>No se pudieron cargar las estadísticas.</Text>
+        )}
+
+        <Button title="Cerrar" onPress={onClose} style={styles.closeButton} />
+      </Card>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    width: '90%',
-    height: '80%',
-    backgroundColor: COLORS.primary,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     padding: SPACING.md,
-    borderRadius: BORDERS.radius,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 700,
+    maxHeight: '90%',
+    padding: SPACING.lg,
   },
   title: {
-    fontSize: FONT_SIZES.h2,
-    color: COLORS.white,
-    marginBottom: SPACING.md,
+    fontSize: 22,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
     textAlign: 'center',
+    fontWeight: '700',
   },
-  section: {
+  scrollView: {
+    flex: 1,
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.accent,
-    marginBottom: SPACING.sm,
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+    fontWeight: '700',
   },
-  statText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.body,
-    marginBottom: SPACING.xs,
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -SPACING.xs,
+    marginBottom: SPACING.md,
   },
-  attendanceItem: {
-    backgroundColor: COLORS.secondary,
-    padding: SPACING.sm,
-    borderRadius: BORDERS.radius / 2,
-    marginBottom: SPACING.sm,
-  },
-  closeButton: {
-    backgroundColor: COLORS.secondary,
+  statCard: {
+    backgroundColor: COLORS.card,
     padding: SPACING.md,
     borderRadius: BORDERS.radius,
     alignItems: 'center',
-    marginTop: SPACING.md,
+    flex: 1,
+    minWidth: '45%',
+    marginHorizontal: SPACING.xs,
+    marginBottom: SPACING.sm,
+    borderLeftWidth: 4,
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
+  statValue: {
+    color: COLORS.textPrimary,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  statLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: SPACING.xs,
+    textTransform: 'uppercase',
+  },
+  efficiencyContainer: {
+    backgroundColor: COLORS.card,
+    padding: SPACING.lg,
+    borderRadius: BORDERS.radius,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E6EEF3',
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  efficiencyValue: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: SPACING.xs,
+  },
+  efficiencyText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  attendanceItem: {
+    backgroundColor: '#FFFFFF',
+    padding: SPACING.md,
+    borderRadius: BORDERS.radius,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E6EEF3',
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  attendanceRow: {
+    marginBottom: SPACING.sm,
+  },
+  attendanceDate: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  attendanceDetails: {
+    marginBottom: SPACING.xs,
+  },
+  attendanceTime: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  timeValue: {
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  attendanceLocation: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    marginTop: SPACING.xs,
+  },
+  emptyText: {
+    color: COLORS.placeholder,
+    textAlign: 'center',
+    marginVertical: SPACING.lg,
+    fontSize: 14,
+  },
+  errorText: {
+    color: COLORS.error,
+    textAlign: 'center',
+    marginVertical: SPACING.lg,
+    fontSize: 14,
+  },
+  closeButton: {
+    marginTop: SPACING.md,
   },
 });
 
