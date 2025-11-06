@@ -18,6 +18,9 @@ if (__DEV__) {
   console.log('  - URL configured:', !!SUPABASE_URL);
   console.log('  - Key configured:', !!SUPABASE_ANON_KEY);
   console.log('  - URL value:', SUPABASE_URL ? `${SUPABASE_URL.substring(0, 30)}...` : 'MISSING');
+  console.log('  - ANON_KEY (first 50 chars):', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 50) : 'MISSING');
+  console.log('  - Constants.expoConfig?.extra exists:', !!Constants.expoConfig?.extra);
+  console.log('  - process.env exists:', typeof process.env);
   
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error('⚠️  [Supabase] CRITICAL: Missing environment variables!');

@@ -1,6 +1,6 @@
 // context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import supabase from "../utils/supabase";
 
@@ -207,34 +207,129 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const isWeb = typeof window !== 'undefined' && Platform.OS === 'web';
-      // Derive scheme dynamically from app config to avoid mismatches
-      let appScheme = undefined;
-      try {
-        const Constants = (await import('expo-constants')).default;
-        appScheme = Constants?.expoConfig?.scheme;
-      } catch {}
+      
+      if (isWeb) {
+        // Web flow
+        const redirectTo = `${window.location.origin}/auth/callback`;
+        console.log("[Auth] Google OAuth redirectTo (Web):", redirectTo);
 
-      const scheme = appScheme || 'hotelmanager';
-      const redirectTo = isWeb
-        ? `${window.location.origin}/auth/callback`
-        : `${scheme}://auth/callback`;
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: false,
+          },
+        });
 
-      console.log("[Auth] Google OAuth redirectTo:", redirectTo);
+        if (error) throw error;
+        return { success: true, data };
+      } else {
+        // Mobile flow - Use WebBrowser explicitly
+        // Note: expo-web-browser has no default export; import the module object.
+  const WebBrowser = await import('expo-web-browser');
+        
+        // This is critical for the redirect to work
+        WebBrowser.maybeCompleteAuthSession && WebBrowser.maybeCompleteAuthSession();
+        
+        let appScheme = undefined;
+        try {
+          const Constants = (await import('expo-constants')).default;
+          appScheme = Constants?.expoConfig?.scheme;
+        } catch {}
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: false,
-        },
-      });
+        const scheme = appScheme || 'hotelmanager';
+        const redirectTo = `${scheme}://auth/callback`;
 
-      if (error) {
-        console.error("[Auth] OAuth error:", error);
-        throw error;
+  console.log("[Auth] Google OAuth redirectTo (Mobile):", redirectTo);
+
+  // Warm up browser to avoid blank screen delays on some emulators
+  try { WebBrowser.warmUpAsync && (await WebBrowser.warmUpAsync()); } catch {}
+
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: false,
+            queryParams: { prompt: 'select_account' },
+          },
+        });
+
+        if (error) {
+          console.error("[Auth] OAuth error:", error);
+          throw error;
+        }
+
+        // Open the auth URL in browser
+        if (data?.url) {
+          console.log("[Auth] Opening OAuth URL in browser");
+          let result;
+          if (WebBrowser.openAuthSessionAsync) {
+            result = await WebBrowser.openAuthSessionAsync(
+              data.url,
+              redirectTo
+            );
+          } else if (WebBrowser.openBrowserAsync) {
+            // Fallback if openAuthSessionAsync isn't available
+            await WebBrowser.openBrowserAsync(data.url);
+            // When user returns, attempt to fetch session from Supabase
+            const { data: sessionData } = await supabase.auth.getSession();
+            return { success: !!sessionData?.session, data: sessionData };
+          } else {
+            // Final fallback to system Linking
+            await Linking.openURL(data.url);
+            const { data: sessionData } = await supabase.auth.getSession();
+            return { success: !!sessionData?.session, data: sessionData };
+          }
+          try { WebBrowser.coolDownAsync && (await WebBrowser.coolDownAsync()); } catch {}
+
+          console.log("[Auth] WebBrowser result:", result);
+          
+          if (result.type === 'success' && result.url) {
+            // Extract tokens or authorization code from the callback URL
+            let accessToken = null;
+            let refreshToken = null;
+            let authCode = null;
+            let errorParam = null;
+            let errorDesc = null;
+            try {
+              // Support both query (?foo) and hash (#access_token) styles
+              const raw = result.url.split('?')[1] || result.url.split('#')[1] || '';
+              const params = new URLSearchParams(raw);
+              accessToken = params.get('access_token');
+              refreshToken = params.get('refresh_token');
+              authCode = params.get('code');
+              errorParam = params.get('error');
+              errorDesc = params.get('error_description');
+            } catch {}
+
+            if (errorParam) {
+              return { success: false, message: errorDesc || errorParam };
+            }
+
+            if (accessToken) {
+              const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken || '',
+              });
+              if (sessionError) throw sessionError;
+              return { success: true, data: sessionData };
+            }
+
+            // PKCE/code flow: exchange authorization code for a session
+            if (authCode && supabase.auth.exchangeCodeForSession) {
+              const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession({
+                authCode,
+              });
+              if (exchangeError) throw exchangeError;
+              return { success: true, data: sessionData };
+            }
+          }
+          
+          return { success: false, message: 'Autenticación cancelada o fallida' };
+        }
+
+        return { success: true, data };
       }
-
-      return { success: true, data };
     } catch (error) {
       console.error("[Auth] Exception in Google sign-in:", error);
       
