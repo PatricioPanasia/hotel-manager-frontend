@@ -1,17 +1,19 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
-import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { COLORS, SPACING } from '../styles/theme';
+import { COLORS, SPACING, BORDERS } from '../styles/theme';
 
 export default function LoginScreen() {
   const { signInWithGoogle, signInWithEmail, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -41,34 +43,57 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.wrapper}>
-        <Card>
+        <Card style={styles.card}>
           <Text style={styles.title}>Hotel Manager</Text>
           <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
           {authError ? (
             <Text style={styles.error}>{authError}</Text>
           ) : null}
 
-          {/* Email/Password Form */}
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Input
-            placeholder="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+          {/* Email Input with Icon */}
+          <View style={[styles.inputContainer, emailFocused && styles.inputContainerFocused]}>
+            <Text style={styles.inputIcon}>✉️</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={COLORS.placeholder}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
+            />
+          </View>
+
+          {/* Password Input with Icon and Toggle */}
+          <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Contraseña"
+              placeholderTextColor={COLORS.placeholder}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+            />
+            <TouchableOpacity 
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <Button
             title={loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             onPress={handleEmailLogin}
             disabled={loading}
+            style={styles.loginButton}
           />
 
           {/* Divider */}
@@ -82,7 +107,7 @@ export default function LoginScreen() {
           <Button
             title="Iniciar Sesión con Google"
             onPress={handleGoogleLogin}
-            style={{ backgroundColor: COLORS.google }}
+            style={styles.googleButton}
           />
         </Card>
       </View>
@@ -102,17 +127,21 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
   },
+  card: {
+    padding: SPACING.xl,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     color: COLORS.primary,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
     textAlign: 'center',
     fontWeight: '700',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
     textAlign: 'center',
   },
   error: {
@@ -120,20 +149,86 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     marginBottom: SPACING.md,
     textAlign: 'center',
+    backgroundColor: '#fee',
+    padding: SPACING.sm,
+    borderRadius: BORDERS.radius,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    height: 54,
+    borderWidth: 2,
+    borderColor: '#e1e4e8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  inputContainerFocused: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#fff',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  inputIcon: {
+    fontSize: 20,
+    marginRight: SPACING.sm,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    paddingVertical: 0,
+  },
+  eyeButton: {
+    padding: SPACING.xs,
+    marginLeft: SPACING.xs,
+  },
+  eyeIcon: {
+    fontSize: 20,
+  },
+  loginButton: {
+    marginTop: SPACING.sm,
+    height: 54,
+    borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: SPACING.lg,
+    marginVertical: SPACING.xl,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#e1e4e8',
   },
   dividerText: {
     marginHorizontal: SPACING.md,
     color: COLORS.textSecondary,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  googleButton: {
+    backgroundColor: '#DB4437',
+    height: 54,
+    borderRadius: 12,
+    shadowColor: '#DB4437',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
 });
