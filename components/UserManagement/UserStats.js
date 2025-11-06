@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Modal } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { usersAPI } from '../../services/api';
-import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { COLORS, SPACING, BORDERS } from '../../styles/theme';
 
@@ -44,17 +43,17 @@ const UserStats = ({ user, onClose, visible }) => {
     >
       <View style={styles.container}>
         <Animated.View 
-          style={styles.cardWrapper}
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(200)}
+          style={styles.modalContent}
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(300)}
         >
-          <Card style={styles.card}>
+          <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>Estadísticas de {user?.nombre}</Text>
 
             {loading ? (
               <ActivityIndicator size="large" color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
             ) : stats ? (
-              <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+              <>
                 {/* Task Statistics */}
                 <Text style={styles.sectionTitle}>📋 Estadísticas de Tareas</Text>
                 <View style={styles.statsGrid}>
@@ -101,13 +100,15 @@ const UserStats = ({ user, onClose, visible }) => {
                 ) : (
                   <Text style={styles.emptyText}>Sin registros de asistencia</Text>
                 )}
-              </ScrollView>
+              </>
             ) : (
               <Text style={styles.errorText}>No se pudieron cargar las estadísticas.</Text>
             )}
-
-            <Button title="Cerrar" onPress={onClose} style={styles.closeButton} />
-          </Card>
+          </ScrollView>
+          
+          <View style={styles.modalActions}>
+            <Button title="Cerrar" onPress={onClose} />
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -120,18 +121,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: SPACING.md,
   },
-  cardWrapper: {
-    width: '100%',
+  modalContent: {
+    width: '90%',
     maxWidth: 600,
-    maxHeight: '85%',
-  },
-  card: {
-    width: '100%',
-    height: '100%',
-    padding: SPACING.lg,
+    maxHeight: '80%',
     backgroundColor: COLORS.white,
+    borderRadius: BORDERS.radius,
+    padding: SPACING.lg,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -147,10 +144,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     textAlign: 'center',
     fontWeight: '700',
-  },
-  scrollView: {
-    flex: 1,
-    marginBottom: SPACING.md,
   },
   sectionTitle: {
     fontSize: 16,
@@ -268,7 +261,9 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
     fontSize: 13,
   },
-  closeButton: {
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     marginTop: SPACING.md,
   },
 });
