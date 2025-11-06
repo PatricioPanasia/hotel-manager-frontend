@@ -123,13 +123,15 @@ export default function DashboardScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Calcula la eficacia como porcentaje de tareas completadas sobre el total
+  // Calcula eficacia: preferimos backend efficiency (excluye tareas personales); fallback a completadas/total
   const computeEficacia = () => {
-    const total = Number(stats.tasks.total || 0);
-    const completadas = Number(stats.tasks.completadas || 0);
-
+    const eff = stats.tasks?.efficiency;
+    if (eff && typeof eff.percentage === 'number') {
+      return `${eff.percentage}%`;
+    }
+    const total = Number(stats.tasks?.total || 0);
+    const completadas = Number(stats.tasks?.completadas || 0);
     if (total === 0) return '0%';
-
     const pct = Math.round((completadas / total) * 100);
     return `${pct}%`;
   };

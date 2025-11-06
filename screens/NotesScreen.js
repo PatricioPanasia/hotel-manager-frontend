@@ -260,6 +260,7 @@ export default function NotesScreen() {
 
   const renderNoteItem = ({ item }) => {
     const canModify = user?.rol === 'admin' || item.usuario_id === user?.id;
+    const isAdminOrSupervisor = user?.rol === 'admin' || user?.rol === 'supervisor';
     return (
       <View style={[styles.note, item.importante && styles.noteImportant]}>
         <View style={styles.noteHeader}>
@@ -276,7 +277,12 @@ export default function NotesScreen() {
           )}
         </View>
         <Text style={styles.noteText}>{item.contenido}</Text>
-        <Text style={styles.noteAuthor}>Por: {item.usuario_nombre}</Text>
+        <Text style={styles.noteAuthor}>
+          Por: {item.usuario_nombre}
+          {isAdminOrSupervisor && item.asignado_nombre ? (
+            <Text> — Para: {item.asignado_nombre}</Text>
+          ) : null}
+        </Text>
       </View>
     );
   };

@@ -264,11 +264,18 @@ export default function TasksScreen() {
   const priorityColors = { alta: COLORS.error, media: COLORS.accent, baja: COLORS.success, urgente: COLORS.error };
   const statusColors = { pendiente: COLORS.accent, en_progreso: COLORS.primary, completada: COLORS.success };
 
+    const isAdminOrSupervisor = user?.rol === 'admin' || user?.rol === 'supervisor';
     return (
       <View style={[styles.task, isCompleted && styles.taskCompleted]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.taskText}>{item.titulo}</Text>
-          <Text style={styles.taskAssignee}>Asignada a: {item.asignado_nombre}</Text>
+          {/* Mostrar creador siempre; mostrar asignado sólo para admin/supervisor */}
+          <Text style={styles.taskMeta}>
+            Por: {item.creador_nombre}
+            {isAdminOrSupervisor && (
+              <Text> — Para: {item.asignado_nombre}</Text>
+            )}
+          </Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColors[item.estado] || COLORS.textSecondary }]}>
             <Text style={styles.statusBadgeText}>{item.estado.replace('_', ' ')}</Text>
           </View>
@@ -378,7 +385,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   taskText: { color: COLORS.textPrimary, fontSize: 16 },
-  taskAssignee: { color: COLORS.textSecondary, fontSize: 12, marginTop: SPACING.xs },
+  taskMeta: { color: COLORS.textSecondary, fontSize: 12, marginTop: SPACING.xs },
   taskRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   priorityIndicator: { width: 10, height: 10, borderRadius: 5 },
   actionText: { fontSize: 18 },
