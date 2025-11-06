@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput } from "react-native";
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
 import Button from '../components/ui/Button';
@@ -14,10 +14,22 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [localError, setLocalError] = useState(null);
 
   const handleEmailLogin = async () => {
+    // Clear previous errors
+    setLocalError(null);
+
+    // Validate inputs
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Por favor completa todos los campos");
+      setLocalError("Por favor completa todos los campos");
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setLocalError("Por favor ingresa un email válido");
       return;
     }
 
@@ -26,16 +38,21 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert("Error de inicio de sesión", result.message || "No se pudo iniciar sesión.");
+      setLocalError(result.message || "No se pudo iniciar sesión.");
     }
+    // On success, navigation happens automatically via AuthContext
   };
 
   const handleGoogleLogin = async () => {
+    setLocalError(null);
     const result = await signInWithGoogle();
     if (!result.success) {
-      Alert.alert("Error de inicio de sesión", result.message || "No se pudo iniciar sesión con Google.");
+      setLocalError(result.message || "No se pudo iniciar sesión con Google.");
     }
   };
+
+  // Show either authError from context (profile validation) or localError (login validation)
+  const displayError = authError || localError;
 
   return (
     <KeyboardAvoidingView
@@ -46,8 +63,12 @@ export default function LoginScreen() {
         <Card style={styles.card}>
           <Text style={styles.title}>Hotel Manager</Text>
           <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
-          {authError ? (
-            <Text style={styles.error}>{authError}</Text>
+          
+          {displayError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.error}>{displayError}</Text>
+            </View>
           ) : null}
 
           {/* Email Input with Icon */}
@@ -58,7 +79,10 @@ export default function LoginScreen() {
               placeholder="Email"
               placeholderTextColor={COLORS.placeholder}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setLocalError(null); // Clear error when user starts typing
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -75,7 +99,10 @@ export default function LoginScreen() {
               placeholder="Contraseña"
               placeholderTextColor={COLORS.placeholder}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setLocalError(null); // Clear error when user starts typing
+              }}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               onFocus={() => setPasswordFocused(true)}
@@ -144,16 +171,24 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
     textAlign: 'center',
   },
-  error: {
-    fontSize: 13,
-    color: COLORS.error,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fee',
-    padding: SPACING.sm,
+    padding: SPACING.md,
     borderRadius: BORDERS.radius,
     borderWidth: 1,
     borderColor: COLORS.error,
+    marginBottom: SPACING.md,
+  },
+  errorIcon: {
+    fontSize: 18,
+    marginRight: SPACING.sm,
+  },
+  error: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.error,
   },
   inputContainer: {
     flexDirection: 'row',

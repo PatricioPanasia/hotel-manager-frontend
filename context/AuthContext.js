@@ -186,7 +186,7 @@ export const AuthProvider = ({ children }) => {
 
   const signInWithEmail = async (email, password) => {
     if (!supabase) {
-      return { success: false, message: "Supabase not configured" };
+      return { success: false, message: "Configuración de autenticación no disponible. Contacta al administrador." };
     }
 
     try {
@@ -197,8 +197,24 @@ export const AuthProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Session will be set automatically by onAuthStateChange
-      // syncUserProfile will be called there
+      // CRITICAL: Wait for profile validation before returning success
+      // This prevents the user from accessing the app if their profile is inactive
+      if (data.session && data.user) {
+        setSession(data.session);
+        const isValid = await syncUserProfile(data.user);
+        
+        if (!isValid) {
+          // Profile validation failed (inactive user or missing profile)
+          // authError was already set by syncUserProfile
+          return { 
+            success: false, 
+            message: authError || "Tu usuario no está habilitado. Contacta al administrador."
+          };
+        }
+        
+        setIsAuthenticated(true);
+      }
+
       return { success: true, data };
     } catch (error) {
       console.error("Error email sign-in:", error);
@@ -208,11 +224,11 @@ export const AuthProvider = ({ children }) => {
       const lower = rawMsg.toLowerCase();
 
       // Credenciales inválidas
-      if (lower.includes("invalid login credentials")) {
+      if (lower.includes("invalid login credentials") || lower.includes("invalid_credentials")) {
         message = "Email o contraseña incorrectos";
       }
       // Email no confirmado
-      else if (lower.includes("email not confirmed") || lower.includes("email not confirmed")) {
+      else if (lower.includes("email not confirmed")) {
         message = "Debes confirmar tu email antes de iniciar sesión";
       }
       // Problemas de red / conectividad
