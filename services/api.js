@@ -1,17 +1,22 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import supabase from '../utils/supabase';
 
 // Base URL controlada por entorno
 // Usa EXPO_PUBLIC_API_BASE_URL cuando esté definido (via EAS o variables locales)
-// Fallback:
-//  - Android: 10.0.2.2 (emulador) para llegar al backend local
-//  - iOS/web: localhost
+// Use Constants.expoConfig.extra for native builds, process.env for web
 const API_BASE_URL =
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_BASE_URL ||
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   (Platform.OS === 'android'
     ? 'http://10.0.2.2:5000/api'
     : 'http://localhost:5000/api');
+
+// Debug: Log API configuration
+if (__DEV__) {
+  console.log('[API] Base URL:', API_BASE_URL);
+}
 
 // Crear instancia de axios
 const api = axios.create({
