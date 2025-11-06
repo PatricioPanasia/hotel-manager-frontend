@@ -184,6 +184,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const signInWithEmail = async (email, password) => {
+    if (!supabase) {
+      return { success: false, message: "Supabase not configured" };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Session will be set automatically by onAuthStateChange
+      // syncUserProfile will be called there
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error email sign-in:", error);
+      let message = "Error en el inicio de sesión";
+      
+      if (error.message?.includes("Invalid login credentials")) {
+        message = "Email o contraseña incorrectos";
+      } else if (error.message?.includes("Email not confirmed")) {
+        message = "Debes confirmar tu email antes de iniciar sesión";
+      }
+
+      return {
+        success: false,
+        message,
+      };
+    }
+  };
+
   const logout = async () => {
     if (!supabase) return;
 
@@ -214,6 +247,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     authError,
     signInWithGoogle,
+    signInWithEmail,
     logout,
     updateUser,
     checkAuth,

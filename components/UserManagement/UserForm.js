@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Switch, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Switch, Platform, Alert } from 'react-native';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import { Picker } from '@react-native-picker/picker';
 import { usersAPI } from '../../services/api';
@@ -46,14 +46,27 @@ const UserForm = ({ user, onSuccess, onCancel }) => {
     try {
       if (isEditing) {
         await usersAPI.update(user.id, formData);
+        Alert.alert("Éxito", "Usuario actualizado correctamente");
       } else {
-        await usersAPI.create(formData);
+        const response = await usersAPI.create(formData);
+        const tempPassword = response.data?.temporaryPassword;
+        
+        if (tempPassword) {
+          Alert.alert(
+            "Usuario creado", 
+            `El usuario ha sido creado exitosamente.\n\nContraseña temporal:\n${tempPassword}\n\nGuarda esta contraseña, el usuario la necesitará para iniciar sesión.`,
+            [{ text: "Entendido" }]
+          );
+        } else {
+          Alert.alert("Éxito", "Usuario creado correctamente");
+        }
       }
       setIsVisible(false);
       // Esperamos a que termine la animación antes de llamar a onSuccess
       setTimeout(onSuccess, 300);
     } catch (error) {
       console.error("Error saving user:", error);
+      Alert.alert("Error", "No se pudo guardar el usuario");
     }
   };
 
@@ -99,12 +112,15 @@ const UserForm = ({ user, onSuccess, onCancel }) => {
         <View>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder="Contraseña (opcional - se generará automáticamente)"
             placeholderTextColor={COLORS.placeholder}
             value={formData.password}
             onChangeText={(value) => handleChange('password', value)}
             secureTextEntry
           />
+          <Text style={styles.hint}>
+            Si dejas este campo vacío, se generará una contraseña temporal automáticamente
+          </Text>
         </View>
       )}
 
@@ -206,6 +222,13 @@ const styles = StyleSheet.create({
     color: COLORS.placeholder,
     fontSize: 14,
     marginBottom: SPACING.xs,
+  },
+  hint: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
   },
   buttonsContainer: {
     flexDirection: 'row',
