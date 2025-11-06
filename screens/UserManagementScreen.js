@@ -122,14 +122,10 @@ const UserManagementScreen = () => {
         visible={isStatsVisible}
         onRequestClose={() => setIsStatsVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <Card style={{ width: '90%', padding: SPACING.lg }}>
-            <UserStats 
-              user={selectedUser} 
-              onClose={() => setIsStatsVisible(false)} 
-            />
-          </Card>
-        </View>
+        <UserStats 
+          user={selectedUser} 
+          onClose={() => setIsStatsVisible(false)} 
+        />
       </Modal>
 
       <ConfirmationModal
