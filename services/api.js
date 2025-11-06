@@ -30,62 +30,127 @@ const api = axios.create({
 // Interceptor para agregar token a las requests
 api.interceptors.request.use(
   async (config) => {
-    console.log(`📤 REQUEST: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-    
-    // Get token from Supabase session
-    if (supabase) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
+    try {
+      console.log(`📤 REQUEST: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+      
+      // Defensive: Get token from Supabase session with error handling
+      if (supabase) {
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.warn('[API] Error getting session for request:', error);
+          } else if (session?.access_token) {
+            config.headers.Authorization = `Bearer ${session.access_token}`;
+          } else {
+            console.warn('[API] No session found for authenticated request');
+          }
+        } catch (sessionError) {
+          console.error('[API] Exception getting session:', sessionError);
+          // Continue without token - let backend handle auth error
+        }
+      } else {
+        console.warn('[API] Supabase not configured - requests will be unauthenticated');
       }
+      
+      return config;
+    } catch (error) {
+      console.error('[API] Exception in request interceptor:', error);
+      return config; // Return config anyway to allow request
     }
-    
-    return config;
   },
   (error) => {
-    console.error('❌ REQUEST ERROR:', error.message);
+    console.error('❌ REQUEST SETUP ERROR:', error.message);
     return Promise.reject(error);
   }
 );
 
-// Interceptor para manejar errores de autenticación
+// Interceptor para manejar errores de autenticación y red
 api.interceptors.response.use(
   (response) => {
     console.log(`✅ RESPONSE: ${response.status} ${response.config.url}`);
     return response;
   },
   async (error) => {
+    // Defensive: Handle various error scenarios
+    const url = error.config?.url || 'unknown';
+    const status = error.response?.status;
+    const message = error.message || 'Unknown error';
+    
     console.error(`❌ RESPONSE ERROR:`, {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
+      url,
+      status,
+      message,
       data: error.response?.data
     });
     
+    // Network errors (no response from server)
+    if (!error.response) {
+      console.error('[API] Network error - no response from server');
+      error.userMessage = 'Sin conexión al servidor. Verifica tu conexión a internet.';
+      return Promise.reject(error);
+    }
+    
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized - try to refresh token
+    if (status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      try {
-        // Try to refresh session with Supabase
-        if (supabase) {
-          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError || !session) {
-            // Session refresh failed, sign out
-            await supabase.auth.signOut();
-            return Promise.reject(refreshError || new Error('Session expired'));
-          }
-          
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        console.error('Refresh error:', refreshError);
-        return Promise.reject(refreshError);
+      if (!supabase) {
+        console.error('[API] 401 error but Supabase not configured');
+        error.userMessage = 'Sesión expirada. Por favor inicia sesión nuevamente.';
+        return Promise.reject(error);
       }
+      
+      try {
+        console.log('[API] Attempting to refresh session...');
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.error('[API] Refresh error:', refreshError);
+          throw refreshError;
+        }
+        
+        if (!session || !session.access_token) {
+          console.error('[API] Refresh returned no session');
+          throw new Error('No session after refresh');
+        }
+        
+        console.log('[API] Session refreshed successfully');
+        
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
+        return api(originalRequest);
+        
+      } catch (refreshError) {
+        console.error('[API] Failed to refresh session:', refreshError);
+        
+        // Sign out user - session is invalid
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('[API] Error signing out after refresh failure:', signOutError);
+        }
+        
+        error.userMessage = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+        return Promise.reject(error);
+      }
+    }
+
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      error.userMessage = 'La solicitud tardó demasiado. Intenta nuevamente.';
+    }
+    
+    // Handle server errors (500+)
+    if (status >= 500) {
+      error.userMessage = 'Error en el servidor. Intenta nuevamente más tarde.';
+    }
+    
+    // Handle bad request / validation errors
+    if (status === 400) {
+      error.userMessage = error.response?.data?.message || 'Datos inválidos.';
     }
 
     return Promise.reject(error);

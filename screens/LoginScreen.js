@@ -21,33 +21,70 @@ export default function LoginScreen() {
     setLocalError(null);
 
     // Validate inputs
-    if (!email.trim() || !password.trim()) {
+    if (!email || !password) {
       setLocalError("Por favor completa todos los campos");
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    
+    if (!trimmedEmail) {
+      setLocalError("El email no puede estar vacío");
       return;
     }
 
     // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    if (!emailRegex.test(trimmedEmail)) {
       setLocalError("Por favor ingresa un email válido");
       return;
     }
 
-    setLoading(true);
-    const result = await signInWithEmail(email.trim(), password);
-    setLoading(false);
-
-    if (!result.success) {
-      setLocalError(result.message || "No se pudo iniciar sesión.");
+    // Password length validation
+    if (password.length < 6) {
+      setLocalError("La contraseña debe tener al menos 6 caracteres");
+      return;
     }
-    // On success, navigation happens automatically via AuthContext
+
+    setLoading(true);
+    
+    try {
+      const result = await signInWithEmail(trimmedEmail, password);
+      
+      if (!result) {
+        setLocalError("Error inesperado. Intenta nuevamente.");
+        return;
+      }
+      
+      if (!result.success) {
+        setLocalError(result.message || "No se pudo iniciar sesión.");
+      }
+      // On success, navigation happens automatically via AuthContext
+    } catch (error) {
+      console.error("[LoginScreen] Exception during login:", error);
+      setLocalError("Error inesperado. Verifica tu conexión e intenta nuevamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
     setLocalError(null);
-    const result = await signInWithGoogle();
-    if (!result.success) {
-      setLocalError(result.message || "No se pudo iniciar sesión con Google.");
+    
+    try {
+      const result = await signInWithGoogle();
+      
+      if (!result) {
+        setLocalError("Error inesperado con Google. Intenta nuevamente.");
+        return;
+      }
+      
+      if (!result.success) {
+        setLocalError(result.message || "No se pudo iniciar sesión con Google.");
+      }
+    } catch (error) {
+      console.error("[LoginScreen] Exception during Google login:", error);
+      setLocalError("Error inesperado. Verifica tu conexión e intenta nuevamente.");
     }
   };
 
